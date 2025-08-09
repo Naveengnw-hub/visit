@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Gap Analysis - NWP Portal</title>
+<link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+<header>
+  <div class="logo">NWP Tourism</div>
+  <nav>
+    <ul>
+      <li><a href="/">Home</a></li>
+      <li><a href="/assets.html">Tourism Assets</a></li>
+      <li><a href="/analysis.html" class="active">Gap Analysis</a></li>
+      <li><a href="/recommendations.html">Recommendations</a></li>
+      <li><a href="/about.html">About</a></li>
+    </ul>
+  </nav>
+</header>
+<main>
+  <h1>Gap Analysis</h1>
+  <p>This shows the count of tourism assets by category.</p>
+  <pre id="gap-analysis-result" style="background:#e4f0df; border:1px solid #2c5c3b; padding:1rem; border-radius:6px; max-width:600px;"></pre>
+</main>
+<script>
+async function loadGapAnalysis() {
+  try {
+    const res = await fetch('/api/gap-analysis');
+    const analysis = await res.json();
+    let text = 'Asset counts by category:\n\n';
+    analysis.forEach(row => {
+      text += `${row.category}: ${row.count}\n`;
+    });
+    document.getElementById('gap-analysis-result').textContent = text;
+  } catch {
+    document.getElementById('gap-analysis-result').textContent = 'Failed to load gap analysis.';
+  }
+}
+
+window.onload = loadGapAnalysis;
+</script>
+</body>
+</html>
+
