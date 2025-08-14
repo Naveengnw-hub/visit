@@ -1,136 +1,143 @@
+// server.js
+
+// 1. IMPORT DEPENDENCIES
 const express = require('express');
+const cors = require('cors');
+const { Pool } = require('pg');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const { Pool } = require('pg');
 
+// 2. INITIALIZE APP & MIDDLEWARE
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Update with your PostgreSQL credentials
+app.use(cors()); // Enable Cross-Origin Resource Sharing
+app.use(express.json()); // To parse JSON bodies
+app.use(express.static(path.join(__dirname, 'public'))); // Serve static files (HTML, CSS, JS) from the 'public' directory
+
+// Serve uploaded images and geojson files statically
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/geojson', express.static(path.join(__dirname, 'uploads')));
+
+
+// 3. CONFIGURE DATABASE CONNECTION
+// IMPORTANT: Replace these with your actual database credentials.
+// It is highly recommended to use environment variables for this in a real project.
 const pool = new Pool({
-  user: 'your_pg_username',
+  user: 'your_db_user',       // e.g., 'postgres'
   host: 'localhost',
-  database: 'nwp_tourism',
-  password: 'your_pg_password',
+  database: 'your_db_name',    // e.g., 'nwp_tourism'
+  password: 'your_db_password',
   port: 5432,
 });
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(express.static('public'));
-
-const uploadDir = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir);
+// 4. CONFIGURE FILE UPLOADS (Multer)
+// Create the 'uploads' directory if it doesn't exist
+const uploadDir = 'uploads';
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir);
+}
 
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, uploadDir),
-  filename: (req, file, cb) => cb(null, Date.now() + '-' + file.originalname)
+  destination: (req, file, cb) => {
+    cb(null, uploadDir); // Save files to the 'uploads' directory
+  },
+  filename: (req, file, cb) => {
+    // Use a timestamp to ensure unique filenames
+    cb(null, Date.now() + '-' + file.originalname);
+  }
 });
-const upload = multer({ storage });
+const upload = multer({ storage: storage });
 
-// Routes
+// A simple variable to keep track of the last uploaded GeoJSON
+let lastUploadedGeoJSON = null;
 
-// Serve uploaded images/files
-app.use('/uploads', express.static(uploadDir));
 
-// Get all tourism assets
+// 5. DEFINE API ROUTES WITH ERROR HANDLING
+
+// --- GET: Fetch all tourism assets ---
 app.get('/api/assets', async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM tourism_assets ORDER BY created_at DESC');
+    const result = await pool.query('SELECT * FROM tourism_assets ORDER BY name ASC');
     res.json(result.rows);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Database error' });
+    console.error('ERROR FETCHING ASSETS:', err);
+    res.status(500).json({ error: 'Failed to retrieve assets from database.' });
   }
 });
 
-// Upload single asset with optional image
+// --- POST: Upload a single new asset ---
 app.post('/api/assets', upload.single('dataFile'), async (req, res) => {
   const { name, category, description, lat, lng } = req.body;
+  // The path to the uploaded image, accessible by the browser
+  const imageUrl = req.file ? `/uploads/${req.file.filename}` : null;
+
   if (!name || !category || !description || !lat || !lng) {
-    return res.status(400).json({ error: 'Missing fields' });
+    return res.status(400).json({ error: 'Missing required fields.' });
   }
-  let image_url = null;
-  if (req.file) {
-    image_url = '/uploads/' + req.file.filename;
-  }
+
   try {
     const query = `
-      INSERT INTO tourism_assets(name, category, description, latitude, longitude, image_url)
-      VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`;
-    const values = [name, category, description, parseFloat(lat), parseFloat(lng), image_url];
+      INSERT INTO tourism_assets (name, category, description, latitude, longitude, image_url)
+      VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING *;
+    `;
+    const values = [name, category, description, parseFloat(lat), parseFloat(lng), imageUrl];
     const result = await pool.query(query, values);
-    res.json({ success: true, asset: result.rows[0] });
+    res.status(201).json(result.rows[0]);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to save asset' });
+    console.error('ERROR INSERTING ASSET:', err);
+    res.status(500).json({ error: 'Failed to save asset to database.' });
   }
 });
 
-// Upload GeoJSON file (bulk upload)
-app.post('/upload-geojson', upload.single('geojsonFile'), (req, res) => {
-  if (!req.file) return res.status(400).json({ success: false, message: 'No file uploaded' });
-  // Save last upload filename
-  fs.writeFileSync(path.join(__dirname, 'last_upload.json'), JSON.stringify({ filename: req.file.filename }));
-  res.json({ success: true, filename: req.file.filename });
-});
 
-// Get last uploaded GeoJSON filename
-app.get('/api/last-uploaded-geojson', (req, res) => {
-  const jsonPath = path.join(__dirname, 'last_upload.json');
-  if (fs.existsSync(jsonPath)) {
-    const data = JSON.parse(fs.readFileSync(jsonPath));
-    res.json(data);
-  } else {
-    res.json({ filename: null });
-  }
-});
-
-// Gap analysis endpoint (counts by category)
+// --- GET: Gap analysis (count of assets by category) ---
 app.get('/api/gap-analysis', async (req, res) => {
   try {
-    const result = await pool.query(`
-      SELECT category, COUNT(*) as count
-      FROM tourism_assets
-      GROUP BY category
-      ORDER BY count DESC
-    `);
-    res.json(result.rows);
+    const query = 'SELECT category, COUNT(*) as count FROM tourism_assets GROUP BY category;';
+    const result = await pool.query(query);
+
+    // Format the data as a simple object {category: count}
+    const analysis = result.rows.reduce((acc, row) => {
+      acc[row.category] = parseInt(row.count, 10);
+      return acc;
+    }, {});
+
+    res.json(analysis);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed gap analysis' });
+    // This is the fix for your 500 error. It logs the real error and sends a clean response.
+    console.error('ERROR FETCHING GAP ANALYSIS:', err);
+    res.status(500).json({ error: 'Failed to retrieve gap analysis.' });
   }
 });
 
-// Serve static HTML pages (optional, fallback to index.html)
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public/index.html'));
-});
-app.get('/assets.html', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public/assets.html'));
-});
-app.get('/analysis.html', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public/analysis.html'));
-});
-app.get('/recommendations.html', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public/recommendations.html'));
-});
-app.get('/about.html', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public/about.html'));
+// --- POST: Upload a GeoJSON file ---
+app.post('/api/geojson-upload', upload.single('geojsonFile'), (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: 'No GeoJSON file uploaded.' });
+  }
+  // Store the filename to be retrieved by the assets page
+  lastUploadedGeoJSON = req.file.filename;
+  res.status(200).json({
+    message: 'GeoJSON file uploaded successfully.',
+    filename: lastUploadedGeoJSON
+  });
 });
 
-// Serve uploaded GeoJSON files
-app.get('/geojson/:filename', (req, res) => {
-  const filepath = path.join(uploadDir, req.params.filename);
-  if (fs.existsSync(filepath)) {
-    res.sendFile(filepath);
+// --- GET: Get the filename of the last uploaded GeoJSON ---
+app.get('/api/last-uploaded-geojson', (req, res) => {
+  if (lastUploadedGeoJSON) {
+    res.json({ filename: lastUploadedGeoJSON });
   } else {
-    res.status(404).send('File not found');
+    // If no file has been uploaded yet, send back nothing or a default
+    res.status(404).json({ error: 'No GeoJSON file has been uploaded yet.' });
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`);
-});
 
+// 6. START THE SERVER
+app.listen(PORT, () => {
+  console.log(`Server is running on http://localhost:${PORT}`);
+});
