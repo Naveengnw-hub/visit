@@ -1,1 +1,43 @@
-[]
+[
+  {
+    "_id": "64d9e0f3c7e7b3a0a3c7d0a1",
+    "assetType": "Natural Attractions",
+    "placeName": "Sigiriya Lion Rock",
+    "location": "7.9575, 80.7600",
+    "hasVisited": "Yes",
+    "visitFrequency": "First Time",
+    "lastVisitDate": "2025-07-20T00:00:00.000Z",
+    "seasonOfVisit": "Summer",
+    "overallSatisfaction": 5,
+    "wouldRecommend": "Yes",
+    "bestThing": "Scenery",
+    "improvements": "More signboards would be helpful.",
+    "createdAt": "2025-08-14T10:00:00.000Z",
+    "updatedAt": "2025-08-14T10:00:00.000Z"
+  },
+  {
+    "_id": "64d9e1f5c7e7b3a0a3c7d0a2",
+    "assetType": "Cultural & Historical Attractions",
+    "placeName": "Dambulla Cave Temple",
+    "location": "7.8566, 80.6483",
+    "hasVisited": "Yes",
+    "visitFrequency": "Occasionally",
+    "lastVisitDate": "2024-11-15T00:00:00.000Z",
+    "seasonOfVisit": "Winter",
+    "overallSatisfaction": 4,
+    "wouldRecommend": "Yes",
+    "bestThing": "Culture",
+    "improvements": "The lighting inside could be improved.",
+    "createdAt": "2025-08-14T11:00:00.000Z",
+    "updatedAt": "2025-08-14T11:00:00.000Z"
+  },
+  {
+    "_id": "64d9e2f7c7e7b3a0a3c7d0a3",
+    "assetType": "Hospitality & Services",
+    "placeName": "Heritance Kandalama",
+    "location": "7.8500, 80.6833",
+    "hasVisited": "No",
+    "createdAt": "2025-08-14T12:00:00.000Z",
+    "updatedAt": "2025-08-14T12:00:00.000Z"
+  }
+]
