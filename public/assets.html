@@ -1,148 +1,271 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Tourism Assets - NWP Portal</title>
-<link rel="stylesheet" href="/css/style.css" />
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Tourism Assets - NWP Portal</title>
+  <link rel="stylesheet" href="/css/style.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <!-- Font Awesome for icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
+
 <body>
-<header>
-  <div class="logo">NWP Tourism</div>
-  <nav>
-    <ul>
-      <li><a href="/">Home</a></li>
-      <li><a href="/assets.html" class="active">Tourism Assets</a></li>
-      <li><a href="/analysis.html">Gap Analysis</a></li>
-      <li><a href="/recommendations.html">Recommendations</a></li>
-      <li><a href="/about.html">About</a></li>
-    </ul>
-  </nav>
-</header>
-<main>
-  <h1>Tourism Assets Map</h1>
-  <div id="map" style="height: 600px; border-radius: 8px; border: 2px solid #2c5c3b;"></div>
-</main>
+  <header>
+    <div class="logo">NWP Tourism</div>
+    <nav>
+      <ul>
+        <li><a href="/">Home</a></li>
+        <li><a href="/assets.html" class="active">Tourism Assets</a></li>
+        <li><a href="/analysis.html">Gap Analysis</a></li>
+        <li><a href="/recommendations.html">Recommendations</a></li>
+        <li><a href="/about.html">About</a></li>
+      </ul>
+    </nav>
+  </header>
+  <main>
+    <h1>Interactive Tourism Map</h1>
+    <p>This map displays all the tourism assets currently stored in the portal's database. The table below provides a
+      detailed log.</p>
+    <p id="map-status" style="text-align: center; font-weight: 600;"></p>
+    <div id="map" style="height: 500px; border-radius: 8px; border: 2px solid #ddd; background-color: #f0f4f8;"></div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script>
-const map = L.map('map').setView([7.5, 80.3], 8);
+    <!-- NEW: Data Log Table Section -->
+    <section class="data-log-container">
+      <h2>Asset Data Log</h2>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Asset Name</th>
+            <th>Category</th>
+            <th>Latitude</th>
+            <th>Longitude</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="asset-table-body">
+          <!-- Rows will be dynamically inserted here by JavaScript -->
+        </tbody>
+      </table>
+    </section>
+  </main>
 
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  maxZoom: 18,
-  attribution: '© OpenStreetMap contributors'
-}).addTo(map);
+  <!-- NEW: Hidden Modal for Editing Assets -->
+  <div class="modal-overlay" id="edit-modal" style="display:none;">
+    <div class="modal-content">
+      <h2>Edit Asset</h2>
+      <form id="edit-asset-form">
+        <input type="hidden" id="edit-asset-id" name="id">
+        <label for="edit-name">Asset Name:</label>
+        <input type="text" id="edit-name" name="name" required />
 
-let boundaryLayer = null;
-let pointsLayer = null;
+        <label for="edit-category">Category:</label>
+        <select id="edit-category" name="category" required>
+          <option value="religious">Religious</option>
+          <option value="heritage">Heritage</option>
+          <option value="nature">Nature / Eco-Spot</option>
+          <option value="accommodation">Accommodation</option>
+          <option value="urban">Urban / Attraction</option>
+        </select>
 
-async function loadLastGeoJSON() {
-  try {
-    const res = await fetch('/api/last-uploaded-geojson');
-    const data = await res.json();
-    if (data.filename) {
-      loadGeoJSON(data.filename);
-    }
-  } catch (err) {
-    console.error('Failed to load last uploaded GeoJSON:', err);
-  }
-}
+        <label for="edit-description">Description:</label>
+        <textarea id="edit-description" name="description" rows="3"></textarea>
 
-async function loadGeoJSON(filename) {
-  try {
-    const res = await fetch(`/geojson/${filename}`);
-    if (!res.ok) throw new Error('Failed to fetch GeoJSON');
+        <label for="edit-lat">Latitude:</label>
+        <input type="text" id="edit-lat" name="latitude" required />
 
-    const geojson = await res.json();
+        <label for="edit-lng">Longitude:</label>
+        <input type="text" id="edit-lng" name="longitude" required />
 
-    if (boundaryLayer) map.removeLayer(boundaryLayer);
-    if (pointsLayer) map.removeLayer(pointsLayer);
+        <div class="modal-actions">
+          <button type="submit">Save Changes</button>
+          <button type="button" id="cancel-edit">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
 
-    const polygons = {
-      type: 'FeatureCollection',
-      features: geojson.features.filter(f => ['Polygon', 'MultiPolygon'].includes(f.geometry.type))
-    };
-    const points = {
-      type: 'FeatureCollection',
-      features: geojson.features.filter(f => f.geometry.type === 'Point')
-    };
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    // --- GLOBAL VARIABLES ---
+    let allAssets = []; // Store all assets globally to find them for editing
+    let map; // Define map globally
+    let pointsLayer; // Define points layer globally
 
-    if (polygons.features.length > 0) {
-      boundaryLayer = L.geoJSON(polygons, {
-        style: { color: '#2c5c3b', weight: 3, fillOpacity: 0.1 }
+    // --- INITIALIZATION ---
+    document.addEventListener('DOMContentLoaded', () => {
+      map = L.map('map').setView([7.8731, 80.7718], 8);
+      pointsLayer = L.featureGroup().addTo(map);
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 18,
+        attribution: '© OpenStreetMap contributors'
       }).addTo(map);
-      map.fitBounds(boundaryLayer.getBounds());
-    }
 
-    if (points.features.length > 0) {
-      pointsLayer = L.geoJSON(points, {
-        pointToLayer: (feature, latlng) => L.circleMarker(latlng, {
-          radius: 6,
-          fillColor: '#2c5c3b',
-          color: '#155724',
-          weight: 1,
-          opacity: 1,
-          fillOpacity: 0.8
-        }),
-        onEachFeature: (feature, layer) => {
-          if (feature.properties) {
-            const popupContent = Object.entries(feature.properties)
-              .map(([k, v]) => `<strong>${k}:</strong> ${v}`)
-              .join('<br>');
-            layer.bindPopup(popupContent);
-          }
-        }
-      }).addTo(map);
-    }
-  } catch (err) {
-    console.error(err);
-  }
-}
-
-async function loadAssets() {
-  try {
-    const res = await fetch('/api/assets');
-    const assets = await res.json();
-
-    if (pointsLayer) {
-      map.removeLayer(pointsLayer);
-      pointsLayer = null;
-    }
-    if (!assets.length) return;
-
-    pointsLayer = L.layerGroup();
-
-    assets.forEach(asset => {
-      const marker = L.circleMarker([asset.latitude, asset.longitude], {
-        radius: 6,
-        fillColor: '#ff7800',
-        color: '#b35200',
-        weight: 1,
-        opacity: 1,
-        fillOpacity: 0.9
-      });
-      let popupHtml = `<strong>${asset.name}</strong><br>
-        Category: ${asset.category}<br>
-        ${asset.description}<br>`;
-      if (asset.image_url) {
-        popupHtml += `<img src="${asset.image_url}" alt="${asset.name}" style="width:100px; margin-top:5px;">`;
-      }
-      marker.bindPopup(popupHtml);
-      pointsLayer.addLayer(marker);
+      loadAssets();
+      setupEventListeners();
     });
 
-    pointsLayer.addTo(map);
-  } catch (err) {
-    console.error(err);
-  }
-}
+    // --- DATA HANDLING ---
+    async function loadAssets() {
+      const mapStatus = document.getElementById('map-status');
+      mapStatus.textContent = 'Loading tourism assets...';
 
-window.onload = async () => {
-  await loadLastGeoJSON();
-  await loadAssets();
-};
-</script>
+      try {
+        const response = await fetch('/api/assets');
+        if (!response.ok) throw new Error('Failed to fetch assets');
+
+        allAssets = await response.json(); // Store for later use
+
+        populateMap(allAssets);
+        populateTable(allAssets);
+
+        if (allAssets.length === 0) {
+          mapStatus.textContent = 'No assets found. Add one on the Home page!';
+        } else {
+          mapStatus.textContent = '';
+        }
+      } catch (err) {
+        mapStatus.textContent = 'Error: Could not load tourism assets.';
+        console.error(err);
+      }
+    }
+
+    // --- UI POPULATION ---
+    function populateMap(assets) {
+      pointsLayer.clearLayers(); // Clear old markers
+
+      assets.forEach(asset => {
+        const lat = parseFloat(asset.latitude);
+        const lng = parseFloat(asset.longitude);
+        if (isNaN(lat) || isNaN(lng)) return;
+
+        const marker = L.circleMarker([lat, lng], {
+          radius: 8, fillColor: 'var(--secondary-color)', color: '#fff',
+          weight: 2, opacity: 1, fillOpacity: 0.9
+        }).bindPopup(`<strong>${asset.name}</strong>`);
+
+        pointsLayer.addLayer(marker);
+      });
+
+      if (assets.length > 0) {
+        map.fitBounds(pointsLayer.getBounds(), { padding: [50, 50] });
+      }
+    }
+
+    function populateTable(assets) {
+      const tableBody = document.getElementById('asset-table-body');
+      tableBody.innerHTML = ''; // Clear old rows
+
+      if (assets.length === 0) {
+        tableBody.innerHTML = '<tr><td colspan="5">No assets in the database.</td></tr>';
+        return;
+      }
+
+      assets.forEach(asset => {
+        const row = `
+            <tr>
+                <td>${asset.name}</td>
+                <td>${asset.category}</td>
+                <td>${asset.latitude}</td>
+                <td>${asset.longitude}</td>
+                <td class="actions">
+                    <button class="edit-btn" data-id="${asset.id}"><i class="fas fa-edit"></i> Edit</button>
+                    <button class="delete-btn" data-id="${asset.id}"><i class="fas fa-trash"></i> Delete</button>
+                </td>
+            </tr>
+        `;
+        tableBody.innerHTML += row;
+      });
+    }
+
+    // --- EVENT LISTENERS ---
+    function setupEventListeners() {
+      const tableBody = document.getElementById('asset-table-body');
+      const editModal = document.getElementById('edit-modal');
+      const editForm = document.getElementById('edit-asset-form');
+      const cancelBtn = document.getElementById('cancel-edit');
+
+      // Use event delegation for edit/delete buttons
+      tableBody.addEventListener('click', (e) => {
+        if (e.target.closest('.delete-btn')) {
+          const id = e.target.closest('.delete-btn').dataset.id;
+          handleDelete(id);
+        }
+        if (e.target.closest('.edit-btn')) {
+          const id = e.target.closest('.edit-btn').dataset.id;
+          handleEdit(id);
+        }
+      });
+
+      // Handle edit form submission
+      editForm.addEventListener('submit', handleUpdate);
+
+      // Handle cancel button in modal
+      cancelBtn.addEventListener('click', () => {
+        editModal.style.display = 'none';
+      });
+    }
+
+    // --- ACTION HANDLERS ---
+    async function handleDelete(id) {
+      if (!confirm('Are you sure you want to delete this asset?')) {
+        return;
+      }
+      try {
+        const response = await fetch(`/api/assets/${id}`, { method: 'DELETE' });
+        if (!response.ok) throw new Error('Failed to delete asset.');
+        loadAssets(); // Refresh data
+      } catch (err) {
+        alert('Error deleting asset. Please try again.');
+        console.error(err);
+      }
+    }
+
+    function handleEdit(id) {
+      const asset = allAssets.find(a => a.id == id);
+      if (!asset) return;
+
+      // Populate the modal form
+      document.getElementById('edit-asset-id').value = asset.id;
+      document.getElementById('edit-name').value = asset.name;
+      document.getElementById('edit-category').value = asset.category;
+      document.getElementById('edit-description').value = asset.description;
+      document.getElementById('edit-lat').value = asset.latitude;
+      document.getElementById('edit-lng').value = asset.longitude;
+
+      // Show the modal
+      document.getElementById('edit-modal').style.display = 'flex';
+    }
+
+    async function handleUpdate(e) {
+      e.preventDefault();
+      const id = document.getElementById('edit-asset-id').value;
+      const updatedAsset = {
+        name: document.getElementById('edit-name').value,
+        category: document.getElementById('edit-category').value,
+        description: document.getElementById('edit-description').value,
+        latitude: document.getElementById('edit-lat').value,
+        longitude: document.getElementById('edit-lng').value,
+      };
+
+      try {
+        const response = await fetch(`/api/assets/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(updatedAsset)
+        });
+        if (!response.ok) throw new Error('Failed to update asset.');
+
+        document.getElementById('edit-modal').style.display = 'none';
+        loadAssets(); // Refresh data
+      } catch (err) {
+        alert('Error updating asset. Please try again.');
+        console.error(err);
+      }
+    }
+  </script>
 </body>
-</html>
 
+</html>
