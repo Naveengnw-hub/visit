@@ -594,3 +594,64 @@ textarea:focus {
   }
 
 }
+
+/* === NEW: Homepage Summary Section Styles === */
+.summary-section {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2rem;
+  align-items: flex-start;
+  justify-content: center;
+  margin-top: 2rem;
+}
+
+/* New smaller class for the bulk upload sidebar */
+.bulk-upload-sidebar {
+  max-width: 400px;
+  flex-grow: 1;
+}
+
+/* New styles for the gap analysis preview card */
+.analysis-preview-card {
+  max-width: 400px;
+  flex-grow: 1;
+}
+
+.analysis-preview-card h3 {
+  margin-top: 0;
+  color: var(--primary-color);
+  border-bottom: 2px solid var(--light-gray-color);
+  padding-bottom: 0.5rem;
+}
+
+#gap-analysis-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+#gap-analysis-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid #f0f0f0;
+  font-size: 1.1rem;
+}
+
+#gap-analysis-list li:last-child {
+  border-bottom: none;
+}
+
+.analysis-label {
+  font-weight: 600;
+}
+
+.analysis-value {
+  font-weight: 700;
+  padding: 0.2rem 0.6rem;
+  background-color: var(--primary-color);
+  color: white;
+  border-radius: 4px;
+  font-size: 1rem;
+}

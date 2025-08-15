@@ -1,5 +1,3 @@
-// public/js/upload.js
-
 document.addEventListener('DOMContentLoaded', () => {
   const assetUploadForm = document.getElementById('asset-upload-form');
   const uploadStatus = document.getElementById('upload-status');
@@ -12,19 +10,15 @@ document.addEventListener('DOMContentLoaded', () => {
       e.preventDefault();
       uploadStatus.textContent = 'Uploading...';
       uploadStatus.style.color = 'var(--text-color)';
-
       const formData = new FormData(assetUploadForm);
-
       try {
-        const res = await fetch('/api/assets', {
-          method: 'POST',
-          body: formData,
-        });
-
+        const res = await fetch('/api/assets', { method: 'POST', body: formData });
         if (res.ok) {
           uploadStatus.textContent = 'Asset uploaded successfully!';
           uploadStatus.style.color = 'var(--primary-color)';
           assetUploadForm.reset();
+          // After a successful upload, refresh the gap analysis
+          loadGapAnalysis();
         } else {
           const result = await res.json();
           uploadStatus.textContent = `Error: ${result.error || 'Failed to upload asset.'}`;
@@ -44,20 +38,16 @@ document.addEventListener('DOMContentLoaded', () => {
       e.preventDefault();
       geojsonUploadStatus.textContent = 'Uploading...';
       geojsonUploadStatus.style.color = 'var(--text-color)';
-
       const formData = new FormData(geojsonUploadForm);
-
       try {
-        const res = await fetch('/api/geojson-upload', {
-          method: 'POST',
-          body: formData,
-        });
-
+        const res = await fetch('/api/geojson-upload', { method: 'POST', body: formData });
         if (res.ok) {
           const result = await res.json();
           geojsonUploadStatus.textContent = `File '${result.filename}' uploaded successfully.`;
           geojsonUploadStatus.style.color = 'var(--primary-color)';
           geojsonUploadForm.reset();
+          // After a successful upload, refresh the gap analysis
+          loadGapAnalysis();
         } else {
           const result = await res.json();
           geojsonUploadStatus.textContent = `Error: ${result.error || 'Failed to upload GeoJSON.'}`;
@@ -71,29 +61,33 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // --- Fetch Gap Analysis Data (Moved from old upload.js logic) ---
-  const gapAnalysisResult = document.getElementById('gap-analysis-result');
-  if (gapAnalysisResult) {
-    async function loadGapAnalysis() {
-      try {
-        const res = await fetch('/api/gap-analysis');
-        const analysis = await res.json();
+  // --- Fetch Gap Analysis Data for the Homepage ---
+  // CHANGED: This function now builds a styled list
+  const gapAnalysisList = document.getElementById('gap-analysis-list');
+  async function loadGapAnalysis() {
+    if (!gapAnalysisList) return; // Only run if the element exists
+    try {
+      const res = await fetch('/api/gap-analysis');
+      const analysis = await res.json();
 
-        if (Object.keys(analysis).length === 0) {
-          gapAnalysisResult.textContent = 'No asset data available for analysis.';
-          return;
-        }
+      gapAnalysisList.innerHTML = ''; // Clear the list
 
-        let text = 'Asset Counts by Category:\n\n';
-        Object.entries(analysis).forEach(([category, count]) => {
-          const formattedCategory = category.charAt(0).toUpperCase() + category.slice(1);
-          text += `${formattedCategory}: ${count}\n`;
-        });
-        gapAnalysisResult.textContent = text;
-      } catch (err) {
-        gapAnalysisResult.textContent = 'Failed to load gap analysis.';
+      if (analysis.labels.length === 0) {
+        gapAnalysisList.innerHTML = '<li>No asset data available for analysis.</li>';
+        return;
       }
+
+      analysis.labels.forEach((label, index) => {
+        const count = analysis.data[index];
+        const listItem = document.createElement('li');
+        listItem.innerHTML = `<span class="analysis-label">${label}</span><span class="analysis-value">${count}</span>`;
+        gapAnalysisList.appendChild(listItem);
+      });
+
+    } catch (err) {
+      gapAnalysisList.innerHTML = '<li>Failed to load analysis.</li>';
     }
-    loadGapAnalysis();
   }
+  // Load the analysis when the page first loads
+  loadGapAnalysis();
 });
