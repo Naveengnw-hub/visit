@@ -300,7 +300,7 @@ textarea:focus {
   transform: scale(1.1);
 }
 
-/* === Analysis Page Styles === */
+/* === Chart Analysis Page Styles === */
 .analysis-wrapper {
   display: flex;
   flex-wrap: wrap;
@@ -527,7 +527,7 @@ textarea:focus {
 }
 
 
-/* === NEW: Responsive Design for Mobile Phones === */
+/* === Responsive Design for Mobile Phones === */
 @media (max-width: 768px) {
 
   /* --- General Adjustments --- */
