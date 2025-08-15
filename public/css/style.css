@@ -419,7 +419,7 @@ textarea:focus {
   text-align: center;
 }
 
-/* === NEW: Data Log Table Styles on Assets Page === */
+/* === Data Log Table Styles on Assets Page === */
 .data-log-container {
   margin-top: 2.5rem;
 }
@@ -431,7 +431,6 @@ textarea:focus {
   box-shadow: var(--shadow);
   border-radius: var(--border-radius);
   overflow: hidden;
-  /* Ensures border-radius is respected by children */
 }
 
 .data-table th,
@@ -483,8 +482,7 @@ textarea:focus {
   margin-right: 5px;
 }
 
-
-/* === NEW: Modal Styles for Editing === */
+/* === Modal Styles for Editing === */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -526,4 +524,73 @@ textarea:focus {
 
 .modal-actions #cancel-edit:hover {
   background-color: #95a5a6;
+}
+
+
+/* === NEW: Responsive Design for Mobile Phones === */
+@media (max-width: 768px) {
+
+  /* --- General Adjustments --- */
+  body {
+    padding: 0.5rem;
+  }
+
+  main {
+    padding: 1rem;
+  }
+
+  /* --- Header and Navigation --- */
+  header {
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1rem;
+  }
+
+  nav ul {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.5rem 1rem;
+  }
+
+  /* --- Homepage Hero Section --- */
+  .hero-text h1 {
+    font-size: 2.2rem;
+  }
+
+  /* --- Two-Column Layouts --- */
+  #interactive-section,
+  .analysis-wrapper,
+  .about-main {
+    flex-direction: column;
+  }
+
+  #interactive-section .map-container,
+  #interactive-section .form-container,
+  .analysis-wrapper .chart-container,
+  .analysis-wrapper .legend-container,
+  .about-main .about-content,
+  .about-main .developer-card {
+    max-width: 100%;
+  }
+
+  /* --- Analysis Page Chart --- */
+  .chart-container {
+    height: 400px;
+  }
+
+  /* --- Assets Page Data Table --- */
+  .data-table-wrapper {
+    overflow-x: auto;
+    box-shadow: var(--shadow);
+    border-radius: var(--border-radius);
+  }
+
+  .data-table {
+    box-shadow: none;
+  }
+
+  .data-table td.actions {
+    min-width: 160px;
+  }
+
 }
