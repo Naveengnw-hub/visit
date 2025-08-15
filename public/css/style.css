@@ -300,7 +300,7 @@ textarea:focus {
   transform: scale(1.1);
 }
 
-/* === Chart Analysis Page Styles === */
+/* === Analysis Page Styles === */
 .analysis-wrapper {
   display: flex;
   flex-wrap: wrap;
@@ -526,76 +526,7 @@ textarea:focus {
   background-color: #95a5a6;
 }
 
-
-/* === Responsive Design for Mobile Phones === */
-@media (max-width: 768px) {
-
-  /* --- General Adjustments --- */
-  body {
-    padding: 0.5rem;
-  }
-
-  main {
-    padding: 1rem;
-  }
-
-  /* --- Header and Navigation --- */
-  header {
-    flex-direction: column;
-    gap: 1rem;
-    padding: 1rem;
-  }
-
-  nav ul {
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 0.5rem 1rem;
-  }
-
-  /* --- Homepage Hero Section --- */
-  .hero-text h1 {
-    font-size: 2.2rem;
-  }
-
-  /* --- Two-Column Layouts --- */
-  #interactive-section,
-  .analysis-wrapper,
-  .about-main {
-    flex-direction: column;
-  }
-
-  #interactive-section .map-container,
-  #interactive-section .form-container,
-  .analysis-wrapper .chart-container,
-  .analysis-wrapper .legend-container,
-  .about-main .about-content,
-  .about-main .developer-card {
-    max-width: 100%;
-  }
-
-  /* --- Analysis Page Chart --- */
-  .chart-container {
-    height: 400px;
-  }
-
-  /* --- Assets Page Data Table --- */
-  .data-table-wrapper {
-    overflow-x: auto;
-    box-shadow: var(--shadow);
-    border-radius: var(--border-radius);
-  }
-
-  .data-table {
-    box-shadow: none;
-  }
-
-  .data-table td.actions {
-    min-width: 160px;
-  }
-
-}
-
-/* === NEW: Homepage Summary Section Styles === */
+/* === Homepage Summary Section Styles === */
 .summary-section {
   display: flex;
   flex-wrap: wrap;
@@ -605,13 +536,11 @@ textarea:focus {
   margin-top: 2rem;
 }
 
-/* New smaller class for the bulk upload sidebar */
 .bulk-upload-sidebar {
   max-width: 400px;
   flex-grow: 1;
 }
 
-/* New styles for the gap analysis preview card */
 .analysis-preview-card {
   max-width: 400px;
   flex-grow: 1;
@@ -654,4 +583,76 @@ textarea:focus {
   color: white;
   border-radius: 4px;
   font-size: 1rem;
+}
+
+
+/* === Responsive Design for Mobile Phones === */
+@media (max-width: 768px) {
+
+  /* --- General Adjustments --- */
+  body {
+    padding: 0.5rem;
+  }
+
+  main {
+    padding: 1rem;
+  }
+
+  /* --- Header and Navigation --- */
+  header {
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1rem;
+  }
+
+  nav ul {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.5rem 1rem;
+  }
+
+  /* --- Homepage Hero Section --- */
+  .hero-text h1 {
+    font-size: 2.2rem;
+  }
+
+  /* --- Two-Column Layouts --- */
+  #interactive-section,
+  .analysis-wrapper,
+  .about-main,
+  .summary-section {
+    flex-direction: column;
+  }
+
+  #interactive-section .map-container,
+  #interactive-section .form-container,
+  .analysis-wrapper .chart-container,
+  .analysis-wrapper .legend-container,
+  .about-main .about-content,
+  .about-main .developer-card,
+  .summary-section .analysis-preview-card,
+  .summary-section .bulk-upload-sidebar {
+    max-width: 100%;
+  }
+
+  /* --- Analysis Page Chart --- */
+  .chart-container {
+    height: 400px;
+  }
+
+  /* --- Assets Page Data Table --- */
+  .data-table-wrapper {
+    overflow-x: auto;
+    box-shadow: var(--shadow);
+    border-radius: var(--border-radius);
+  }
+
+  .data-table {
+    box-shadow: none;
+  }
+
+  .data-table td.actions {
+    min-width: 160px;
+  }
+
 }
