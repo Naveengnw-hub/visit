@@ -27,8 +27,9 @@ app.use('/uploads', express.static(uploadDir));
 // THIS IS THE FINAL, CORRECTED VERSION FOR PRODUCTION
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
+  // This SSL configuration is required for secure connections on platforms like Railway
   ssl: {
-    rejectUnauthorized: false // This is the key setting for services like Railway
+    rejectUnauthorized: false
   }
 });
 
@@ -39,7 +40,8 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage: storage });
 
-// 5. DEFINE API ROUTES
+// 5. DEFINE ALL API ROUTES...
+// ... (All your app.get, app.post, app.put, app.delete routes go here and remain unchanged)
 
 // --- GET: Fetch all tourism assets (Read) ---
 app.get('/api/assets', async (req, res) => {
@@ -71,6 +73,7 @@ app.post('/api/assets', upload.single('dataFile'), async (req, res) => {
   }
 });
 
+// ... include your PUT, DELETE, and other routes here ...
 // --- PUT: Update a single asset by its ID (Update) ---
 app.put('/api/assets/:id', async (req, res) => {
   const { id } = req.params;
@@ -78,10 +81,10 @@ app.put('/api/assets/:id', async (req, res) => {
   if (!name || !category || !latitude || !longitude) return res.status(400).json({ error: 'Missing fields.' });
   try {
     const query = `
-      UPDATE tourism_assets
-      SET name = $1, category = $2, description = $3, latitude = $4, longitude = $5
-      WHERE id = $6 RETURNING *;
-    `;
+        UPDATE tourism_assets
+        SET name = $1, category = $2, description = $3, latitude = $4, longitude = $5
+        WHERE id = $6 RETURNING *;
+      `;
     const values = [name, category, description, parseFloat(latitude), parseFloat(longitude), id];
     const result = await pool.query(query, values);
     if (result.rowCount === 0) return res.status(404).json({ error: 'Asset not found.' });
@@ -107,15 +110,16 @@ app.delete('/api/assets/:id', async (req, res) => {
 
 // --- POST: Bulk Upload GeoJSON file ---
 app.post('/api/geojson-upload', upload.single('geojsonFile'), async (req, res) => {
-  // ... (This route remains the same as the previous version)
+  // ... same as before
 });
 
 // --- GET: Gap analysis data for charts ---
 app.get('/api/gap-analysis', async (req, res) => {
-  // ... (This route remains the same as the previous version)
+  // ... same as before
 });
+
 
 // 6. START THE SERVER
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
-});
+}); ```
