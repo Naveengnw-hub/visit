@@ -1,171 +1,99 @@
-// This file is included on index.html and assets.html for map and upload handling
+// public/js/upload.js
 
-const map = L.map('map').setView([7.5, 80.3], 8);
+document.addEventListener('DOMContentLoaded', () => {
+  const assetUploadForm = document.getElementById('asset-upload-form');
+  const uploadStatus = document.getElementById('upload-status');
+  const geojsonUploadForm = document.getElementById('geojson-upload-form');
+  const geojsonUploadStatus = document.getElementById('geojson-upload-status');
 
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  maxZoom: 18,
-  attribution: '© OpenStreetMap contributors'
-}).addTo(map);
+  // --- Handle Single Asset Form Submission ---
+  if (assetUploadForm) {
+    assetUploadForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      uploadStatus.textContent = 'Uploading...';
+      uploadStatus.style.color = 'var(--text-color)';
 
-let boundaryLayer = null;
-let pointsLayer = null;
+      const formData = new FormData(assetUploadForm);
 
-async function loadLastGeoJSON() {
-  try {
-    const res = await fetch('/api/last-uploaded-geojson');
-    const data = await res.json();
-    if (data.filename) {
-      await loadGeoJSON(data.filename);
-    }
-  } catch (err) {
-    console.error('Failed to load last uploaded GeoJSON:', err);
-  }
-}
+      try {
+        const res = await fetch('/api/assets', {
+          method: 'POST',
+          body: formData,
+        });
 
-async function loadGeoJSON(filename) {
-  try {
-    const res = await fetch(`/geojson/${filename}`);
-    if (!res.ok) throw new Error('Failed to fetch GeoJSON');
-    const geojson = await res.json();
-
-    if (boundaryLayer) map.removeLayer(boundaryLayer);
-    if (pointsLayer) map.removeLayer(pointsLayer);
-
-    const polygons = {
-      type: 'FeatureCollection',
-      features: geojson.features.filter(f => ['Polygon', 'MultiPolygon'].includes(f.geometry.type))
-    };
-    const points = {
-      type: 'FeatureCollection',
-      features: geojson.features.filter(f => f.geometry.type === 'Point')
-    };
-
-    if (polygons.features.length > 0) {
-      boundaryLayer = L.geoJSON(polygons, {
-        style: { color: '#2c5c3b', weight: 3, fillOpacity: 0.1 }
-      }).addTo(map);
-      map.fitBounds(boundaryLayer.getBounds());
-    }
-
-    if (points.features.length > 0) {
-      pointsLayer = L.geoJSON(points, {
-        pointToLayer: (feature, latlng) => L.circleMarker(latlng, {
-          radius: 6,
-          fillColor: '#2c5c3b',
-          color: '#155724',
-          weight: 1,
-          opacity: 1,
-          fillOpacity: 0.8
-        }),
-        onEachFeature: (feature, layer) => {
-          if (feature.properties) {
-            const popupContent = Object.entries(feature.properties)
-              .map(([k, v]) => `<strong>${k}:</strong> ${v}`)
-              .join('<br>');
-            layer.bindPopup(popupContent);
-          }
+        if (res.ok) {
+          uploadStatus.textContent = 'Asset uploaded successfully!';
+          uploadStatus.style.color = 'var(--primary-color)';
+          assetUploadForm.reset();
+        } else {
+          const result = await res.json();
+          uploadStatus.textContent = `Error: ${result.error || 'Failed to upload asset.'}`;
+          uploadStatus.style.color = 'red';
         }
-      }).addTo(map);
-    }
-  } catch (err) {
-    console.error(err);
-  }
-}
-
-async function loadAssets() {
-  try {
-    const res = await fetch('/api/assets');
-    const assets = await res.json();
-
-    if (pointsLayer) {
-      map.removeLayer(pointsLayer);
-      pointsLayer = null;
-    }
-    if (!assets.length) return;
-
-    pointsLayer = L.layerGroup();
-
-    assets.forEach(asset => {
-      const marker = L.circleMarker([asset.latitude, asset.longitude], {
-        radius: 6,
-        fillColor: '#ff7800',
-        color: '#b35200',
-        weight: 1,
-        opacity: 1,
-        fillOpacity: 0.9
-      });
-      let popupHtml = `<strong>${asset.name}</strong><br>
-        Category: ${asset.category}<br>
-        ${asset.description}<br>`;
-      if (asset.image_url) {
-        popupHtml += `<img src="${asset.image_url}" alt="${asset.name}" style="width:100px; margin-top:5px;">`;
+      } catch (err) {
+        uploadStatus.textContent = 'An error occurred. Please check the console.';
+        uploadStatus.style.color = 'red';
+        console.error('Upload failed:', err);
       }
-      marker.bindPopup(popupHtml);
-      pointsLayer.addLayer(marker);
     });
-
-    pointsLayer.addTo(map);
-  } catch (err) {
-    console.error(err);
   }
-}
 
-// Upload handlers for forms on index.html
+  // --- Handle GeoJSON Form Submission ---
+  if (geojsonUploadForm) {
+    geojsonUploadForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      geojsonUploadStatus.textContent = 'Uploading...';
+      geojsonUploadStatus.style.color = 'var(--text-color)';
 
-const assetForm = document.getElementById('asset-upload-form');
-const uploadStatus = document.getElementById('upload-status');
-const geojsonForm = document.getElementById('geojson-upload-form');
-const geojsonUploadStatus = document.getElementById('geojson-upload-status');
+      const formData = new FormData(geojsonUploadForm);
 
-if (assetForm) {
-  assetForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    uploadStatus.textContent = 'Uploading...';
+      try {
+        const res = await fetch('/api/geojson-upload', {
+          method: 'POST',
+          body: formData,
+        });
 
-    const formData = new FormData(assetForm);
+        if (res.ok) {
+          const result = await res.json();
+          geojsonUploadStatus.textContent = `File '${result.filename}' uploaded successfully.`;
+          geojsonUploadStatus.style.color = 'var(--primary-color)';
+          geojsonUploadForm.reset();
+        } else {
+          const result = await res.json();
+          geojsonUploadStatus.textContent = `Error: ${result.error || 'Failed to upload GeoJSON.'}`;
+          geojsonUploadStatus.style.color = 'red';
+        }
+      } catch (err) {
+        geojsonUploadStatus.textContent = 'An error occurred. Please check the console.';
+        geojsonUploadStatus.style.color = 'red';
+        console.error('GeoJSON upload failed:', err);
+      }
+    });
+  }
 
-    try {
-      const res = await fetch('/api/assets', {
-        method: 'POST',
-        body: formData,
-      });
-      const data = await res.json();
-      if (!data.success) throw new Error(data.error || 'Upload failed');
-      uploadStatus.textContent = 'Upload successful!';
-      assetForm.reset();
-      loadAssets();
-    } catch (err) {
-      uploadStatus.textContent = 'Error: ' + err.message;
+  // --- Fetch Gap Analysis Data (Moved from old upload.js logic) ---
+  const gapAnalysisResult = document.getElementById('gap-analysis-result');
+  if (gapAnalysisResult) {
+    async function loadGapAnalysis() {
+      try {
+        const res = await fetch('/api/gap-analysis');
+        const analysis = await res.json();
+
+        if (Object.keys(analysis).length === 0) {
+          gapAnalysisResult.textContent = 'No asset data available for analysis.';
+          return;
+        }
+
+        let text = 'Asset Counts by Category:\n\n';
+        Object.entries(analysis).forEach(([category, count]) => {
+          const formattedCategory = category.charAt(0).toUpperCase() + category.slice(1);
+          text += `${formattedCategory}: ${count}\n`;
+        });
+        gapAnalysisResult.textContent = text;
+      } catch (err) {
+        gapAnalysisResult.textContent = 'Failed to load gap analysis.';
+      }
     }
-  });
-}
-
-if (geojsonForm) {
-  geojsonForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    geojsonUploadStatus.textContent = 'Uploading GeoJSON...';
-
-    const formData = new FormData(geojsonForm);
-
-    try {
-      const res = await fetch('/upload-geojson', {
-        method: 'POST',
-        body: formData,
-      });
-      const data = await res.json();
-      if (!data.success) throw new Error(data.message || 'Upload failed');
-
-      geojsonUploadStatus.textContent = 'Upload successful! Loading map...';
-
-      await loadGeoJSON(data.filename);
-    } catch (err) {
-      geojsonUploadStatus.textContent = 'Error: ' + err.message;
-    }
-  });
-}
-
-window.onload = async () => {
-  await loadLastGeoJSON();
-  await loadAssets();
-};
-
+    loadGapAnalysis();
+  }
+});

@@ -1,5 +1,14 @@
+# Node.js
 node_modules/
+npm-debug.log
+
+# Environment Variables
 .env
+
+# Application Generated Files
 uploads/
+last_upload.json
+
+# Operating System Files
 .DS_Store
-*.log
+Thumbs.db

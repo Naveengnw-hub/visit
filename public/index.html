@@ -1,104 +1,169 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>NWP Tourism Portal</title>
-<link rel="stylesheet" href="/css/style.css" />
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>NWP Tourism Portal</title>
+  <link rel="stylesheet" href="/css/style.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 </head>
+
 <body>
-<header>
-  <div class="logo">NWP Tourism</div>
-  <nav>
-    <ul>
-      <li><a href="/">Home</a></li>
-      <li><a href="/assets.html">Tourism Assets</a></li>
-      <li><a href="/analysis.html">Gap Analysis</a></li>
-      <li><a href="/recommendations.html">Recommendations</a></li>
-      <li><a href="/about.html">About</a></li>
-    </ul>
-  </nav>
-</header>
-<main>
-  <section class="hero" style="background-image: url('https://storage.googleapis.com/gweb-cloudblog-publish/images/sri-lanka-GET.2e16d0ba.fill-1600x800.jpg');">
-    <div class="hero-text">
-      <h1>Discover the North Western Province</h1>
-      <p>A data-driven approach to enhancing tourism potential.</p>
-      <a class="cta-button" href="#map-section">View Interactive Map</a>
-    </div>
-  </section>
+  <header>
+    <div class="logo">NWP Tourism</div>
+    <nav>
+      <ul>
+        <li><a href="/">Home</a></li>
+        <li><a href="/assets.html">Tourism Assets</a></li>
+        <li><a href="/analysis.html">Gap Analysis</a></li>
+        <li><a href="/recommendations.html">Recommendations</a></li>
+        <li><a href="/about.html">About</a></li>
+      </ul>
+    </nav>
+  </header>
+  <main>
+    <section class="hero"
+      style="background-image: url('https://storage.googleapis.com/gweb-cloudblog-publish/images/sri-lanka-GET.2e16d0ba.fill-1600x800.jpg');">
+      <div class="hero-text">
+        <h1>Discover the North Western Province</h1>
+        <p>A data-driven approach to enhancing tourism potential.</p>
+        <a class="cta-button" href="#map-section">View Interactive Map</a>
+      </div>
+    </section>
 
-  <section id="overview">
-    <h2>Welcome to the Portal</h2>
-    <p>This portal provides analytical tools and data to support sustainable tourism development in Sri Lanka's North Western Province.</p>
-  </section>
+    <section id="overview">
+      <h2>Welcome to the Portal</h2>
+      <p>This portal provides analytical tools and data to support sustainable tourism development in Sri Lanka's North
+        Western Province.</p>
+    </section>
 
-  <section style="text-align: center;">
-    <h2>Explore Tourism Assets</h2>
-    <p>Use our interactive map to see the distribution of tourism sites across the province.</p>
-    <a href="#map-section" class="cta-button">View Interactive Map</a>
-  </section>
+    <section id="interactive-section">
+      <div class="map-container">
+        <h2>Click on the Map to Contribute</h2>
+        <p>Click a location on the map to get its coordinates for a new asset.</p>
+        <div id="map" style="height: 580px; border-radius: 8px; border: 2px solid #ddd; cursor: crosshair;"></div>
+      </div>
 
-  <section id="map-section" style="margin: 2rem 0;">
-    <h2>Tourism Map</h2>
-    <div id="map" style="height: 500px; border-radius: 8px; border: 2px solid #2c5c3b;"></div>
-  </section>
+      <div class="form-container sidebar">
+        <h3>Contribute a Single Asset</h3>
+        <form id="asset-upload-form">
+          <label for="name">Asset Name:</label>
+          <input type="text" id="name" name="name" required />
 
-  <section id="data-upload" style="display: flex; gap: 2rem; flex-wrap: wrap; justify-content: center;">
-    <div class="sidebar" style="max-width: 400px;">
-      <h3>Contribute a Single Asset</h3>
-      <form id="asset-upload-form">
-        <label for="name">Asset Name:</label>
-        <input type="text" id="name" name="name" required />
+          <label for="category">Category:</label>
+          <select id="category" name="category" required>
+            <option value="" disabled selected>Select a Category</option>
+            <option value="religious">Religious</option>
+            <option value="heritage">Heritage</option>
+            <option value="nature">Nature / Eco-Spot</option>
+            <option value="accommodation">Accommodation</option>
+            <option value="urban">Urban / Attraction</option>
+          </select>
 
-        <label for="category">Category:</label>
-        <select id="category" name="category" required>
-          <option value="" disabled selected>Select a Category</option>
-          <option value="religious">Religious</option>
-          <option value="heritage">Heritage</option>
-          <option value="nature">Nature / Eco-Spot</option>
-          <option value="accommodation">Accommodation</option>
-          <option value="urban">Urban / Attraction</option>
-        </select>
+          <label for="description">Description:</label>
+          <textarea id="description" name="description" rows="3" required></textarea>
 
-        <label for="description">Description:</label>
-        <textarea id="description" name="description" rows="3" required></textarea>
+          <label for="lat">Latitude:</label>
+          <input type="text" id="lat" name="lat" placeholder="Click map or enter manually" required />
 
-        <label for="lat">Latitude:</label>
-        <input type="text" id="lat" name="lat" placeholder="e.g., 7.5060734" required />
+          <label for="lng">Longitude:</label>
+          <input type="text" id="lng" name="lng" placeholder="Click map or enter manually" required />
 
-        <label for="lng">Longitude:</label>
-        <input type="text" id="lng" name="lng" placeholder="e.g., 80.2795195" required />
+          <label for="dataFile">Select Image:</label>
+          <input type="file" id="dataFile" name="dataFile" accept="image/*" />
 
-        <label for="dataFile">Select Image:</label>
-        <input type="file" id="dataFile" name="dataFile" accept="image/*" />
+          <button type="submit">Upload Single Asset</button>
+        </form>
+        <p id="upload-status"></p>
+      </div>
+    </section>
 
-        <button type="submit">Upload Single Asset</button>
-      </form>
-      <p id="upload-status"></p>
-    </div>
+    <section id="data-upload" style="display: flex; justify-content: center; margin-top: 2rem;">
+      <div class="sidebar" style="max-width: 400px;">
+        <h3>Bulk Upload (For Admins)</h3>
+        <form id="geojson-upload-form">
+          <p>Upload a complete GeoJSON file of tourism assets for bulk data import.</p>
+          <label for="geojsonFile">Select GeoJSON file:</label>
+          <input type="file" id="geojsonFile" name="geojsonFile" accept=".geojson,.json" required />
+          <button type="submit">Upload Data</button>
+        </form>
+        <p id="geojson-upload-status"></p>
+      </div>
+    </section>
 
-    <div class="sidebar" style="max-width: 400px;">
-      <h3>Bulk Upload (For Admins)</h3>
-      <form id="geojson-upload-form">
-        <p>Upload a complete GeoJSON file of tourism assets for bulk data import.</p>
-        <label for="geojsonFile">Select GeoJSON file:</label>
-        <input type="file" id="geojsonFile" name="geojsonFile" accept=".geojson,.json" required />
-        <button type="submit">Upload GeoJSON File</button>
-      </form>
-      <p id="geojson-upload-status"></p>
-    </div>
-  </section>
+    <section style="text-align:center; margin-top: 2rem;">
+      <h2>Gap Analysis Result</h2>
+      <pre id="gap-analysis-result"
+        style="background:#f0f4f8; border:1px solid #ddd; border-radius:8px; padding:1rem; max-width:600px; margin:0 auto; white-space: pre-wrap; text-align: left;"></pre>
+    </section>
+  </main>
 
-  <section style="text-align:center; margin-top: 2rem;">
-    <h2>Gap Analysis Result</h2>
-    <pre id="gap-analysis-result" style="background:#e4f0df; border:1px solid #2c5c3b; border-radius:6px; padding:1rem; max-width:600px; margin:0 auto; white-space: pre-wrap;"></pre>
-  </section>
-</main>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="/js/upload.js"></script>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="/js/upload.js"></script>
+  <!-- In public/index.html -->
+
+  <!-- In public/index.html -->
+
+  <script>
+    const map = L.map('map').setView([7.8731, 80.7718], 8);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 18,
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    let marker = null;
+
+    // Updated function to load and style the NEW boundary
+    async function loadBoundary() {
+      try {
+        const response = await fetch('/data/nwp_boundary.geojson');
+        const data = await response.json();
+        const boundaryLayer = L.geoJSON(data, {
+          style: {
+            color: 'var(--primary-color)', // Use the stylish green from style.css
+            weight: 2.5,
+            opacity: 0.8,
+            fillColor: 'var(--primary-color)',
+            fillOpacity: 0.1,
+            dashArray: '5, 5' // Creates a dashed line effect
+          }
+        }).addTo(map);
+        // Automatically zoom the map to fit the new, correct boundary
+        map.fitBounds(boundaryLayer.getBounds());
+      } catch (err) {
+        console.error('Failed to load boundary file:', err);
+      }
+    }
+
+    // Load the boundary when the page starts
+    loadBoundary();
+
+    map.on('click', function (e) {
+      const lat = e.latlng.lat.toFixed(6);
+      const lng = e.latlng.lng.toFixed(6);
+
+      document.getElementById('lat').value = lat;
+      document.getElementById('lng').value = lng;
+
+      if (marker) {
+        map.removeLayer(marker);
+      }
+      // Use a stylish CircleMarker instead of the default ugly blue one
+      marker = L.circleMarker(e.latlng, {
+        radius: 8,
+        fillColor: "var(--secondary-color)", // Use the stylish gold from style.css
+        color: "#fff",
+        weight: 2,
+        opacity: 1,
+        fillOpacity: 0.9
+      }).addTo(map);
+      marker.bindPopup(`Selected: ${lat}, ${lng}`).openPopup();
+    });
+  </script>
+
 </body>
-</html>
 
+</html>

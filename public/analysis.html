@@ -1,46 +1,211 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Gap Analysis - NWP Portal</title>
-<link rel="stylesheet" href="/css/style.css" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Gap Analysis - NWP Portal</title>
+  <link rel="stylesheet" href="/css/style.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <!-- Font Awesome for icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+  <!-- Load Main Leaflet Library First -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- Load Leaflet.heat Plugin Second -->
+  <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
 </head>
+
 <body>
-<header>
-  <div class="logo">NWP Tourism</div>
-  <nav>
-    <ul>
-      <li><a href="/">Home</a></li>
-      <li><a href="/assets.html">Tourism Assets</a></li>
-      <li><a href="/analysis.html" class="active">Gap Analysis</a></li>
-      <li><a href="/recommendations.html">Recommendations</a></li>
-      <li><a href="/about.html">About</a></li>
-    </ul>
-  </nav>
-</header>
-<main>
-  <h1>Gap Analysis</h1>
-  <p>This shows the count of tourism assets by category.</p>
-  <pre id="gap-analysis-result" style="background:#e4f0df; border:1px solid #2c5c3b; padding:1rem; border-radius:6px; max-width:600px;"></pre>
-</main>
-<script>
-async function loadGapAnalysis() {
-  try {
-    const res = await fetch('/api/gap-analysis');
-    const analysis = await res.json();
-    let text = 'Asset counts by category:\n\n';
-    analysis.forEach(row => {
-      text += `${row.category}: ${row.count}\n`;
-    });
-    document.getElementById('gap-analysis-result').textContent = text;
-  } catch {
-    document.getElementById('gap-analysis-result').textContent = 'Failed to load gap analysis.';
-  }
-}
+  <header>
+    <div class="logo">NWP Tourism</div>
+    <nav>
+      <ul>
+        <li><a href="/">Home</a></li>
+        <li><a href="/assets.html">Tourism Assets</a></li>
+        <li><a href="/analysis.html" class="active">Gap Analysis</a></li>
+        <li><a href="/recommendations.html">Recommendations</a></li>
+        <li><a href="/about.html">About</a></li>
+      </ul>
+    </nav>
+  </header>
+  <main>
+    <h1>Gap Analysis</h1>
+    <p>Visualize the density of all tourism assets with a heatmap, or view individual categories with color-coded
+      markers.</p>
 
-window.onload = loadGapAnalysis;
-</script>
+    <div class="analysis-wrapper">
+      <div id="map" class="analysis-map"></div>
+
+      <div class="sidebar analysis-controls">
+        <h3>Map Layers</h3>
+        <div class="view-toggle">
+          <label><input type="radio" name="view" value="heatmap" checked> Heatmap (Density)</label>
+          <label><input type="radio" name="view" value="category"> Categorized Points</label>
+        </div>
+        <hr>
+        <div id="category-legend-container" style="display:none;">
+          <h3>Category Legend</h3>
+          <ul id="category-legend">
+            <!-- Legend will be dynamically generated here -->
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Interpretation Guide Section -->
+    <div class="analysis-explanation">
+      <h4>How to Interpret This Map</h4>
+      <div class="explanation-item">
+        <h5><i class="fas fa-fire"></i> Heatmap (Density) View</h5>
+        <p>This view shows the concentration of tourism assets. Bright red "hotspots" indicate a high density of
+          attractions in a small area, which helps identify popular tourist hubs and potentially underserved regions.
+        </p>
+      </div>
+      <div class="explanation-item">
+        <h5><i class="fas fa-map-marker-alt"></i> Categorized Points View</h5>
+        <p>This view shows the exact location of each asset, color-coded by category. This is useful for understanding
+          the distribution and mix of different types of tourism assets (e.g., are religious sites clustered together?).
+        </p>
+      </div>
+    </div>
+
+    <p id="map-status" style="text-align: center; font-weight: 600;"></p>
+
+  </main>
+
+  <script>
+    // --- SETUP ---
+    const map = L.map('map').setView([7.8731, 80.7718], 9);
+    const mapStatus = document.getElementById('map-status');
+    const legendContainer = document.getElementById('category-legend-container');
+    const legendList = document.getElementById('category-legend');
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 18,
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    const categoryColors = {
+      'religious': '#8e44ad',
+      'heritage': '#c0392b',
+      'nature': '#27ae60',
+      'accommodation': '#2980b9',
+      'urban': '#f39c12',
+      'default': '#7f8c8d'
+    };
+
+    // --- MAIN LOGIC ---
+    let heatLayer = null;
+    let categoryLayers = {};
+
+    async function initializeMap() {
+      mapStatus.textContent = 'Loading asset data for analysis...';
+
+      await loadBoundary();
+
+      try {
+        const response = await fetch('/api/assets');
+        const assets = await response.json();
+
+        if (assets.length === 0) {
+          mapStatus.textContent = 'No asset data found to analyze.';
+          return;
+        }
+
+        processAssetData(assets);
+        setupControls();
+        map.addLayer(heatLayer);
+        mapStatus.textContent = '';
+
+      } catch (err) {
+        mapStatus.textContent = 'Error: Could not load asset data.';
+        mapStatus.style.color = 'red';
+        console.error(err);
+      }
+    }
+
+    function processAssetData(assets) {
+      const heatPoints = [];
+
+      assets.forEach(asset => {
+        const lat = parseFloat(asset.latitude);
+        const lng = parseFloat(asset.longitude);
+        if (isNaN(lat) || isNaN(lng)) return;
+
+        heatPoints.push([lat, lng]);
+
+        const category = asset.category || 'default';
+        if (!categoryLayers[category]) {
+          categoryLayers[category] = L.featureGroup();
+        }
+
+        const color = categoryColors[category] || categoryColors['default'];
+        const marker = L.circleMarker([lat, lng], {
+          radius: 7,
+          fillColor: color,
+          color: '#fff',
+          weight: 1.5,
+          opacity: 1,
+          fillOpacity: 0.8
+        }).bindPopup(`<strong>${asset.name}</strong><br>Category: ${asset.category}`);
+
+        categoryLayers[category].addLayer(marker);
+      });
+
+      heatLayer = L.heatLayer(heatPoints, { radius: 25 });
+      generateLegend();
+    }
+
+    function generateLegend() {
+      legendList.innerHTML = '';
+      Object.keys(categoryLayers).sort().forEach(category => {
+        const color = categoryColors[category] || categoryColors['default'];
+        const formattedCategory = category.charAt(0).toUpperCase() + category.slice(1);
+        const count = categoryLayers[category].getLayers().length;
+        const listItem = document.createElement('li');
+        listItem.innerHTML = `
+                <span class="legend-color-box" style="background-color: ${color}"></span>
+                <span class="legend-label">${formattedCategory}</span>
+                <span class="legend-value">${count}</span>
+            `;
+        legendList.appendChild(listItem);
+      });
+    }
+
+    function setupControls() {
+      const radios = document.querySelectorAll('input[name="view"]');
+      radios.forEach(radio => {
+        radio.addEventListener('change', (event) => {
+          map.removeLayer(heatLayer);
+          Object.values(categoryLayers).forEach(layer => map.removeLayer(layer));
+
+          if (event.target.value === 'heatmap') {
+            map.addLayer(heatLayer);
+            legendContainer.style.display = 'none';
+          } else {
+            Object.values(categoryLayers).forEach(layer => map.addLayer(layer));
+            legendContainer.style.display = 'block';
+          }
+        });
+      });
+    }
+
+    async function loadBoundary() {
+      try {
+        const response = await fetch('/data/nwp_boundary.geojson');
+        const data = await response.json();
+        const boundaryLayer = L.geoJSON(data, {
+          style: { color: '#34495e', weight: 2, opacity: 0.6, fill: false }
+        }).addTo(map);
+        map.fitBounds(boundaryLayer.getBounds());
+      } catch (err) {
+        console.error('Failed to load boundary file:', err);
+      }
+    }
+
+    window.onload = initializeMap;
+  </script>
 </body>
-</html>
 
+</html>
